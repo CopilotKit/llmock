@@ -1,0 +1,14 @@
+{
+  "fixtures": [
+    {
+      "match": { "userMessage": "change background to blue" },
+      "response": {
+        "toolCalls": [{ "name": "change_background", "arguments": "{\"background\":\"blue\"}" }]
+      }
+    },
+    {
+      "match": { "toolCallId": "call_background" },
+      "response": { "content": "Done! I've changed the background." }
+    }
+  ]
+}

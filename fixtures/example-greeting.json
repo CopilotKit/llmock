@@ -1,0 +1,12 @@
+{
+  "fixtures": [
+    {
+      "match": { "userMessage": "hello" },
+      "response": { "content": "Hello! How can I help you today?" }
+    },
+    {
+      "match": { "userMessage": "goodbye" },
+      "response": { "content": "Goodbye! Have a great day!" }
+    }
+  ]
+}

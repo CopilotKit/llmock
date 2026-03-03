@@ -1,0 +1,15 @@
+{
+  "fixtures": [
+    {
+      "match": { "toolName": "get_weather" },
+      "response": {
+        "toolCalls": [
+          {
+            "name": "get_weather",
+            "arguments": "{\"location\":\"San Francisco\",\"unit\":\"fahrenheit\"}"
+          }
+        ]
+      }
+    }
+  ]
+}
