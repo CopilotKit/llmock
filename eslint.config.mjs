@@ -7,7 +7,7 @@ export default tseslint.config(
   prettier,
   { ignores: ["dist/", "node_modules/", "fixtures/"] },
   {
-    files: ["*.config.{js,mjs,ts}", "commitlint.config.js"],
+    files: ["*.config.{js,mjs,ts,cjs}"],
     languageOptions: { globals: { module: "readonly", require: "readonly" } },
   },
 );
