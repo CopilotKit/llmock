@@ -15,6 +15,8 @@ import {
 import { handleResponses } from "./responses.js";
 import { handleMessages } from "./messages.js";
 import { handleGemini } from "./gemini.js";
+import { upgradeToWebSocket, type WebSocketConnection } from "./ws-framing.js";
+import { handleWebSocketResponses } from "./ws-responses.js";
 
 export interface ServerInstance {
   server: http.Server;
@@ -421,6 +423,65 @@ export async function createServer(
       }
     });
   });
+
+  // ─── WebSocket upgrade handling ──────────────────────────────────────────
+
+  const activeConnections = new Set<WebSocketConnection>();
+
+  server.on(
+    "upgrade",
+    (req: http.IncomingMessage, socket: import("node:net").Socket, head: Buffer) => {
+      const parsedUrl = new URL(req.url ?? "/", `http://${req.headers.host ?? "localhost"}`);
+      const pathname = parsedUrl.pathname;
+
+      if (pathname !== RESPONSES_PATH) {
+        socket.write("HTTP/1.1 404 Not Found\r\n\r\n");
+        socket.destroy();
+        return;
+      }
+
+      // Push any buffered data back before upgrading
+      if (head.length > 0) {
+        socket.unshift(head);
+      }
+
+      let ws: WebSocketConnection;
+      try {
+        ws = upgradeToWebSocket(req, socket);
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : "WebSocket upgrade failed";
+        console.error(`[LLMock] WebSocket upgrade error: ${msg}`);
+        return;
+      }
+
+      activeConnections.add(ws);
+
+      ws.on("error", (err: Error) => {
+        console.error(`[LLMock] WebSocket error: ${err.message}`);
+        activeConnections.delete(ws);
+      });
+
+      ws.on("close", () => {
+        activeConnections.delete(ws);
+      });
+
+      handleWebSocketResponses(ws, fixtures, journal, {
+        ...defaults,
+        model: "gpt-4",
+      });
+    },
+  );
+
+  // Close active WS connections when server shuts down
+  const originalClose = server.close.bind(server);
+  server.close = function (this: http.Server, callback?: (err?: Error) => void) {
+    for (const ws of activeConnections) {
+      ws.close(1001, "Server shutting down");
+    }
+    activeConnections.clear();
+    originalClose(callback);
+    return this;
+  } as typeof server.close;
 
   return new Promise<ServerInstance>((resolve, reject) => {
     server.on("error", reject);
