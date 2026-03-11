@@ -2,7 +2,7 @@ import type * as http from "node:http";
 import type { SSEChunk } from "./types.js";
 
 export function delay(ms: number, signal?: AbortSignal): Promise<void> {
-  if (ms <= 0) return Promise.resolve();
+  if (ms <= 0 || signal?.aborted) return Promise.resolve();
   return new Promise((resolve) => {
     const timer = setTimeout(resolve, ms);
     signal?.addEventListener(

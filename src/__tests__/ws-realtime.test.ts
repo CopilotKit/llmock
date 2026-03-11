@@ -363,6 +363,33 @@ describe("WebSocket /v1/realtime", () => {
     expect(entry!.response.interruptReason).toBe("truncateAfterChunks");
   });
 
+  it("disconnectAfterMs interrupts stream and records in journal", async () => {
+    const fixture: Fixture = {
+      match: { userMessage: "disconnect-rt" },
+      response: { content: "ABCDEFGHIJKLMNOPQRSTUVWXYZ" },
+      chunkSize: 1,
+      latency: 20,
+      disconnectAfterMs: 30,
+    };
+    instance = await createServer([fixture]);
+    const ws = await connectWebSocket(instance.url, "/v1/realtime");
+
+    await ws.waitForMessages(1); // session.created
+
+    ws.send(conversationItemCreate("user", "disconnect-rt"));
+    await ws.waitForMessages(2); // + conversation.item.created
+
+    ws.send(responseCreate());
+
+    await ws.waitForClose();
+    await new Promise((r) => setTimeout(r, 50));
+
+    const entry = instance.journal.getLast();
+    expect(entry).not.toBeNull();
+    expect(entry!.response.interrupted).toBe(true);
+    expect(entry!.response.interruptReason).toBe("disconnectAfterMs");
+  });
+
   it("accumulates conversation state across multiple response.create calls", async () => {
     instance = await createServer(allFixtures);
     const ws = await connectWebSocket(instance.url, "/v1/realtime");

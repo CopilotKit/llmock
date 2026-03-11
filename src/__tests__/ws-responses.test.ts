@@ -291,4 +291,26 @@ describe("WebSocket /v1/responses", () => {
     expect(entry!.response.interrupted).toBe(true);
     expect(entry!.response.interruptReason).toBe("truncateAfterChunks");
   });
+
+  it("disconnectAfterMs interrupts stream and records in journal", async () => {
+    const fixture: Fixture = {
+      match: { userMessage: "disconnect-ws" },
+      response: { content: "ABCDEFGHIJKLMNOPQRSTUVWXYZ" },
+      chunkSize: 1,
+      latency: 20,
+      disconnectAfterMs: 30,
+    };
+    instance = await createServer([fixture]);
+    const ws = await connectWebSocket(instance.url, "/v1/responses");
+
+    ws.send(responseCreateMsg("disconnect-ws"));
+
+    await ws.waitForClose();
+    await new Promise((r) => setTimeout(r, 50));
+
+    const entry = instance.journal.getLast();
+    expect(entry).not.toBeNull();
+    expect(entry!.response.interrupted).toBe(true);
+    expect(entry!.response.interruptReason).toBe("disconnectAfterMs");
+  });
 });
