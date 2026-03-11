@@ -14,9 +14,16 @@ export { Journal } from "./journal.js";
 export { matchFixture, getTextContent } from "./router.js";
 
 // Provider handlers
-export { handleResponses } from "./responses.js";
+export { handleResponses, buildTextStreamEvents, buildToolCallStreamEvents } from "./responses.js";
+export type { ResponsesSSEEvent } from "./responses.js";
 export { handleMessages } from "./messages.js";
 export { handleGemini } from "./gemini.js";
+
+// WebSocket
+export { WebSocketConnection, upgradeToWebSocket, computeAcceptKey } from "./ws-framing.js";
+export { handleWebSocketResponses } from "./ws-responses.js";
+export { handleWebSocketRealtime } from "./ws-realtime.js";
+export { handleWebSocketGeminiLive } from "./ws-gemini-live.js";
 
 // Helpers
 export {

@@ -234,6 +234,9 @@ function buildGeminiToolCallStreamChunks(toolCalls: ToolCall[]): GeminiResponseC
     try {
       argsObj = JSON.parse(tc.arguments || "{}") as Record<string, unknown>;
     } catch {
+      console.warn(
+        `[LLMock] Malformed JSON in fixture tool call arguments for "${tc.name}": ${tc.arguments}`,
+      );
       argsObj = {};
     }
     return {
@@ -285,6 +288,9 @@ function buildGeminiToolCallResponse(toolCalls: ToolCall[]): GeminiResponseChunk
     try {
       argsObj = JSON.parse(tc.arguments || "{}") as Record<string, unknown>;
     } catch {
+      console.warn(
+        `[LLMock] Malformed JSON in fixture tool call arguments for "${tc.name}": ${tc.arguments}`,
+      );
       argsObj = {};
     }
     return {

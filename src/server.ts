@@ -15,6 +15,10 @@ import {
 import { handleResponses } from "./responses.js";
 import { handleMessages } from "./messages.js";
 import { handleGemini } from "./gemini.js";
+import { upgradeToWebSocket, type WebSocketConnection } from "./ws-framing.js";
+import { handleWebSocketResponses } from "./ws-responses.js";
+import { handleWebSocketRealtime } from "./ws-realtime.js";
+import { handleWebSocketGeminiLive } from "./ws-gemini-live.js";
 
 export interface ServerInstance {
   server: http.Server;
@@ -24,6 +28,9 @@ export interface ServerInstance {
 
 const COMPLETIONS_PATH = "/v1/chat/completions";
 const RESPONSES_PATH = "/v1/responses";
+const REALTIME_PATH = "/v1/realtime";
+const GEMINI_LIVE_PATH =
+  "/ws/google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContent";
 const MESSAGES_PATH = "/v1/messages";
 const DEFAULT_CHUNK_SIZE = 20;
 
@@ -421,6 +428,84 @@ export async function createServer(
       }
     });
   });
+
+  // ─── WebSocket upgrade handling ──────────────────────────────────────────
+
+  const activeConnections = new Set<WebSocketConnection>();
+
+  server.on(
+    "upgrade",
+    (req: http.IncomingMessage, socket: import("node:net").Socket, head: Buffer) => {
+      const parsedUrl = new URL(req.url ?? "/", `http://${req.headers.host ?? "localhost"}`);
+      const pathname = parsedUrl.pathname;
+
+      if (
+        pathname !== RESPONSES_PATH &&
+        pathname !== REALTIME_PATH &&
+        pathname !== GEMINI_LIVE_PATH
+      ) {
+        socket.write("HTTP/1.1 404 Not Found\r\n\r\n");
+        socket.destroy();
+        return;
+      }
+
+      // Push any buffered data back before upgrading
+      if (head.length > 0) {
+        socket.unshift(head);
+      }
+
+      let ws: WebSocketConnection;
+      try {
+        ws = upgradeToWebSocket(req, socket);
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : "WebSocket upgrade failed";
+        console.error(`[LLMock] WebSocket upgrade error: ${msg}`);
+        if (!socket.destroyed) socket.destroy();
+        return;
+      }
+
+      activeConnections.add(ws);
+
+      ws.on("error", (err: Error) => {
+        console.error(`[LLMock] WebSocket error: ${err.message}`);
+        activeConnections.delete(ws);
+      });
+
+      ws.on("close", () => {
+        activeConnections.delete(ws);
+      });
+
+      // Route to handler
+      if (pathname === RESPONSES_PATH) {
+        handleWebSocketResponses(ws, fixtures, journal, {
+          ...defaults,
+          model: "gpt-4",
+        });
+      } else if (pathname === REALTIME_PATH) {
+        const model = parsedUrl.searchParams.get("model") ?? "gpt-4o-realtime";
+        handleWebSocketRealtime(ws, fixtures, journal, {
+          ...defaults,
+          model,
+        });
+      } else if (pathname === GEMINI_LIVE_PATH) {
+        handleWebSocketGeminiLive(ws, fixtures, journal, {
+          ...defaults,
+          model: "gemini-2.0-flash",
+        });
+      }
+    },
+  );
+
+  // Close active WS connections when server shuts down
+  const originalClose = server.close.bind(server);
+  server.close = function (this: http.Server, callback?: (err?: Error) => void) {
+    for (const ws of activeConnections) {
+      ws.close(1001, "Server shutting down");
+    }
+    activeConnections.clear();
+    originalClose(callback);
+    return this;
+  } as typeof server.close;
 
   return new Promise<ServerInstance>((resolve, reject) => {
     server.on("error", reject);
