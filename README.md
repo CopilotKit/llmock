@@ -648,9 +648,9 @@ Areas where llmock could grow, and explicit non-goals for the current scope.
 
 ## Real-World Usage
 
-[CopilotKit](https://github.com/CopilotKit/CopilotKit) uses llmock in its E2E test suite to verify AI agent behavior across multiple LLM providers without hitting real APIs. The tests exercise the full stack — Playwright driving a Next.js app whose CopilotKit runtime talks to llmock — providing reproducible, fast, and deterministic coverage of streaming text, tool calls, and multi-turn conversations.
+[CopilotKit](https://github.com/CopilotKit/CopilotKit) uses llmock across its test suite to verify AI agent behavior across multiple LLM providers without hitting real APIs. The tests cover streaming text, tool calls, and multi-turn conversations across both v1 and v2 runtimes.
 
-See the [CopilotKit E2E test fixtures](https://github.com/CopilotKit/CopilotKit/tree/main/tests/e2e) for real-world examples of llmock in action.
+See the [CopilotKit test suite](https://github.com/CopilotKit/CopilotKit/search?q=llmock&type=code) for real-world examples of llmock in action.
 
 ## License
 
