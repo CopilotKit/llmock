@@ -107,8 +107,13 @@ export class WebSocketConnection extends EventEmitter {
 
     try {
       this.socket.write(Buffer.concat([header, payload]));
-    } catch {
-      // Socket destroyed between our check and write — nothing to do
+    } catch (err: unknown) {
+      // Expected when socket is destroyed between our check and write.
+      // Log unexpected errors so they don't vanish silently.
+      if (!this.socket.destroyed) {
+        const msg = err instanceof Error ? err.message : String(err);
+        console.error(`[LLMock] Unexpected writeFrame error: ${msg}`);
+      }
     }
   }
 

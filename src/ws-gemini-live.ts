@@ -186,6 +186,7 @@ export function handleWebSocketGeminiLive(
     pending = pending.then(() =>
       processMessage(raw, ws, fixtures, journal, defaults, session).catch((err: unknown) => {
         const msg = err instanceof Error ? err.message : "Internal error";
+        console.error(`[LLMock] WebSocket Gemini Live error: ${msg}`);
         try {
           ws.send(
             JSON.stringify({
@@ -193,7 +194,7 @@ export function handleWebSocketGeminiLive(
             }),
           );
         } catch {
-          // Connection already gone
+          // Connection already gone — original error already logged above
         }
       }),
     );
@@ -382,6 +383,9 @@ async function processMessage(
       try {
         argsObj = JSON.parse(tc.arguments || "{}") as Record<string, unknown>;
       } catch {
+        console.warn(
+          `[LLMock] Malformed JSON in fixture tool call arguments for "${tc.name}": ${tc.arguments}`,
+        );
         argsObj = {};
       }
       return {

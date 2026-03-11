@@ -78,6 +78,9 @@ export function realtimeItemsToMessages(
         item.role === "assistant" ? "assistant" : item.role === "system" ? "system" : "user";
       messages.push({ role, content: text });
     } else if (item.type === "function_call") {
+      if (!item.name) {
+        console.warn("[LLMock] Realtime function_call item missing 'name'");
+      }
       messages.push({
         role: "assistant",
         content: null,
@@ -93,6 +96,9 @@ export function realtimeItemsToMessages(
         ],
       });
     } else if (item.type === "function_call_output") {
+      if (!item.output) {
+        console.warn("[LLMock] Realtime function_call_output item missing 'output'");
+      }
       messages.push({
         role: "tool",
         content: item.output ?? "",
@@ -152,10 +158,11 @@ export function handleWebSocketRealtime(
       processMessage(raw, ws, fixtures, journal, defaults, session, conversationItems).catch(
         (err: unknown) => {
           const msg = err instanceof Error ? err.message : "Internal error";
+          console.error(`[LLMock] WebSocket realtime error: ${msg}`);
           try {
             ws.send(buildErrorRealtimeEvent(msg, "server_error"));
           } catch {
-            // Connection already gone
+            // Connection already gone — original error already logged above
           }
         },
       ),
