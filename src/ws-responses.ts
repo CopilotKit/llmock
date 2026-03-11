@@ -69,10 +69,11 @@ export function handleWebSocketResponses(
     pending = pending.then(() =>
       processMessage(raw, ws, fixtures, journal, defaults).catch((err: unknown) => {
         const msg = err instanceof Error ? err.message : "Internal error";
+        console.error(`[LLMock] WebSocket responses error: ${msg}`);
         try {
           ws.send(JSON.stringify(buildErrorEvent(msg, "server_error")));
         } catch {
-          // Connection already gone
+          // Connection already gone — original error already logged above
         }
       }),
     );

@@ -88,20 +88,24 @@ export function connectWebSocket(url: string, path: string): Promise<WSTestClien
             },
             waitForMessages(count: number, timeoutMs = 5000): Promise<string[]> {
               return new Promise((resolve, reject) => {
+                let settled = false;
+                const timer = setTimeout(() => {
+                  if (!settled) {
+                    settled = true;
+                    reject(
+                      new Error(`Timeout waiting for ${count} messages, got ${messages.length}`),
+                    );
+                  }
+                }, timeoutMs);
                 const check = () => {
-                  if (messages.length >= count) {
+                  if (!settled && messages.length >= count) {
+                    settled = true;
+                    clearTimeout(timer);
                     resolve(messages.slice(0, count));
                   }
                 };
                 check();
                 messageResolvers.push(check);
-                setTimeout(
-                  () =>
-                    reject(
-                      new Error(`Timeout waiting for ${count} messages, got ${messages.length}`),
-                    ),
-                  timeoutMs,
-                );
               });
             },
             waitForClose(): Promise<void> {
