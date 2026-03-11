@@ -1351,6 +1351,27 @@
       </div>
     </section>
 
+    <!-- ═══ Real-World Usage ═════════════════════════════════════════ -->
+    <section class="reveal">
+      <div class="container">
+        <h2>Real-World Usage</h2>
+        <p>
+          <a href="https://github.com/CopilotKit/CopilotKit" target="_blank">CopilotKit</a> uses
+          llmock in its E2E test suite to verify AI agent behavior across multiple LLM providers
+          without hitting real APIs. The tests exercise the full stack &mdash; Playwright driving a
+          Next.js app whose CopilotKit runtime talks to llmock &mdash; providing reproducible, fast,
+          and deterministic coverage of streaming text, tool calls, and multi-turn conversations.
+        </p>
+        <p>
+          See the
+          <a href="https://github.com/CopilotKit/CopilotKit/tree/main/tests/e2e" target="_blank"
+            >CopilotKit E2E test fixtures</a
+          >
+          for real-world examples of llmock in action.
+        </p>
+      </div>
+    </section>
+
     <!-- ═══ Footer ═══════════════════════════════════════════════════ -->
     <footer>
       <div class="container">
