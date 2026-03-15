@@ -433,7 +433,7 @@
 
       /* ─── Sections ───────────────────────────────────────────────── */
       section {
-        padding: 6rem 0;
+        padding: 3rem 0;
       }
 
       .section-label {
@@ -639,10 +639,6 @@
       }
 
       /* ─── Comparison Table ───────────────────────────────────────── */
-      .comparison {
-        border-top: 1px solid var(--border);
-      }
-
       .comparison-table {
         width: 100%;
         margin-top: 3rem;
@@ -1420,21 +1416,18 @@
     <!-- ═══ Real-World Usage ═════════════════════════════════════════ -->
     <section class="reveal">
       <div class="container">
-        <h2>Real-World Usage</h2>
-        <p>
+        <h2 class="section-title">Real-World Usage</h2>
+        <p class="section-desc">
           <a href="https://github.com/CopilotKit/CopilotKit" target="_blank">CopilotKit</a> uses
           llmock across its test suite to verify AI agent behavior across multiple LLM providers
           without hitting real APIs. The tests cover streaming text, tool calls, and multi-turn
-          conversations across both v1 and v2 runtimes.
-        </p>
-        <p>
-          See the
+          conversations across both v1 and v2 runtimes. See the
           <a
             href="https://github.com/CopilotKit/CopilotKit/search?q=llmock&amp;type=code"
             target="_blank"
             >CopilotKit test suite</a
           >
-          for real-world examples of llmock in action.
+          for real-world examples.
         </p>
       </div>
     </section>
