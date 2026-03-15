@@ -988,6 +988,14 @@
             </p>
           </div>
           <div class="feature-card">
+            <div class="feature-icon blue">🔌</div>
+            <h3>WebSocket APIs</h3>
+            <p>
+              OpenAI Responses, OpenAI Realtime, and Gemini Live over WebSocket. Same fixtures, real
+              RFC 6455 framing, zero dependencies. Text + tool calls.
+            </p>
+          </div>
+          <div class="feature-card">
             <div class="feature-icon red">💥</div>
             <h3>Error Injection</h3>
             <p>
@@ -1001,14 +1009,6 @@
             <p>
               Every request recorded. Inspect messages, verify tool calls, assert on conversation
               history. HTTP and programmatic access.
-            </p>
-          </div>
-          <div class="feature-card">
-            <div class="feature-icon blue">🔌</div>
-            <h3>WebSocket APIs</h3>
-            <p>
-              OpenAI Responses, OpenAI Realtime, and Gemini Live over WebSocket. Same fixtures, real
-              RFC 6455 framing, zero dependencies. Text + tool calls.
             </p>
           </div>
         </div>
@@ -1352,28 +1352,6 @@
       </div>
     </section>
 
-    <!-- ═══ Real-World Usage ═════════════════════════════════════════ -->
-    <section class="reveal">
-      <div class="container">
-        <h2>Real-World Usage</h2>
-        <p>
-          <a href="https://github.com/CopilotKit/CopilotKit" target="_blank">CopilotKit</a> uses
-          llmock across its test suite to verify AI agent behavior across multiple LLM providers
-          without hitting real APIs. The tests cover streaming text, tool calls, and multi-turn
-          conversations across both v1 and v2 runtimes.
-        </p>
-        <p>
-          See the
-          <a
-            href="https://github.com/CopilotKit/CopilotKit/search?q=llmock&amp;type=code"
-            target="_blank"
-            >CopilotKit test suite</a
-          >
-          for real-world examples of llmock in action.
-        </p>
-      </div>
-    </section>
-
     <!-- ═══ Claude Code Integration ═══════════════════════════════════ -->
     <section id="claude-code" class="reveal">
       <div class="container">
@@ -1432,6 +1410,28 @@
             </p>
           </div>
         </div>
+      </div>
+    </section>
+
+    <!-- ═══ Real-World Usage ═════════════════════════════════════════ -->
+    <section class="reveal">
+      <div class="container">
+        <h3>Real-World Usage</h3>
+        <p>
+          <a href="https://github.com/CopilotKit/CopilotKit" target="_blank">CopilotKit</a> uses
+          llmock across its test suite to verify AI agent behavior across multiple LLM providers
+          without hitting real APIs. The tests cover streaming text, tool calls, and multi-turn
+          conversations across both v1 and v2 runtimes.
+        </p>
+        <p>
+          See the
+          <a
+            href="https://github.com/CopilotKit/CopilotKit/search?q=llmock&amp;type=code"
+            target="_blank"
+            >CopilotKit test suite</a
+          >
+          for real-world examples of llmock in action.
+        </p>
       </div>
     </section>
 
