@@ -132,7 +132,7 @@ A canary test (`ws-gemini-live.drift.ts`) queries the Gemini model listing API o
 
 Drift tests run on a schedule:
 
-- **Weekly**: Monday 6:00 AM UTC
+- **Daily**: 6:00 AM UTC
 - **Manual**: Trigger via GitHub Actions UI (`workflow_dispatch`)
 - **NOT** on PR or push — these tests hit real APIs and cost money
 
@@ -140,4 +140,4 @@ See `.github/workflows/test-drift.yml`.
 
 ## Cost
 
-~25 API calls per run (16 HTTP response-shape + 3 model listing + 4 WS + 2 canaries) using the cheapest available models (`gpt-4o-mini`, `gpt-4o-mini-realtime-preview`, `claude-haiku-4-5-20251001`, `gemini-2.5-flash`) with 10-100 max tokens each. Under $0.02/week. When Gemini Live text-capable models become available, this will increase to 6 WS calls.
+~25 API calls per run (16 HTTP response-shape + 3 model listing + 4 WS + 2 canaries) using the cheapest available models (`gpt-4o-mini`, `gpt-4o-mini-realtime-preview`, `claude-haiku-4-5-20251001`, `gemini-2.5-flash`) with 10-100 max tokens each. Under $0.15/week at daily cadence. When Gemini Live text-capable models become available, this will increase to 6 WS calls.
