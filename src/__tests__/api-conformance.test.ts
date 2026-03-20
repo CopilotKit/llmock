@@ -1177,3 +1177,256 @@ describe("Cross-provider invariants", () => {
     }
   });
 });
+
+// ---------------------------------------------------------------------------
+// Structured Output: streaming with response_format json_object
+// ---------------------------------------------------------------------------
+
+describe("streaming with response_format json_object", () => {
+  let srv: ServerInstance;
+
+  const JSON_STREAM_FIXTURE: Fixture = {
+    match: { userMessage: "stream-json", responseFormat: "json_object" },
+    response: { content: '{"result":"ok","count":7}' },
+  };
+
+  beforeAll(async () => {
+    srv = await createServer([JSON_STREAM_FIXTURE], { port: 0, chunkSize: 5 });
+  });
+
+  afterAll(async () => {
+    await new Promise<void>((r) => srv.server.close(() => r()));
+  });
+
+  it("returns SSE chunks that reassemble to valid JSON content", async () => {
+    const res = await httpPost(`${srv.url}/v1/chat/completions`, {
+      model: "gpt-4",
+      messages: [{ role: "user", content: "stream-json" }],
+      stream: true,
+      response_format: { type: "json_object" },
+    });
+
+    expect(res.status).toBe(200);
+    expect(res.headers["content-type"]).toBe("text/event-stream");
+
+    const events = parseDataOnlySSE(res.body);
+    expect(events.length).toBeGreaterThan(0);
+
+    // Reassemble content from all delta chunks
+    let assembled = "";
+    for (const evt of events) {
+      const delta = (evt as { choices?: { delta?: { content?: string } }[] }).choices?.[0]?.delta;
+      if (delta?.content) {
+        assembled += delta.content;
+      }
+    }
+
+    // Must reassemble to valid JSON matching fixture content
+    const parsed = JSON.parse(assembled);
+    expect(parsed).toEqual({ result: "ok", count: 7 });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Structured Output: json_schema with schema in request
+// ---------------------------------------------------------------------------
+
+describe("json_schema with schema in request", () => {
+  let srv: ServerInstance;
+
+  const JSON_SCHEMA_FIXTURE: Fixture = {
+    match: { userMessage: "schema-test", responseFormat: "json_schema" },
+    response: { content: '{"name":"test-output"}' },
+  };
+
+  beforeAll(async () => {
+    srv = await createServer([JSON_SCHEMA_FIXTURE], { port: 0 });
+  });
+
+  afterAll(async () => {
+    await new Promise<void>((r) => srv.server.close(() => r()));
+  });
+
+  it("matches fixture when request includes response_format type json_schema with schema object", async () => {
+    const res = await httpPost(`${srv.url}/v1/chat/completions`, {
+      model: "gpt-4",
+      messages: [{ role: "user", content: "schema-test" }],
+      stream: false,
+      response_format: {
+        type: "json_schema",
+        json_schema: { name: "test", schema: { type: "object" } },
+      },
+    });
+
+    expect(res.status).toBe(200);
+    const json = JSON.parse(res.body);
+    expect(json.choices[0].message.content).toBe('{"name":"test-output"}');
+  });
+
+  it("does not match fixture when response_format type differs", async () => {
+    const res = await httpPost(`${srv.url}/v1/chat/completions`, {
+      model: "gpt-4",
+      messages: [{ role: "user", content: "schema-test" }],
+      stream: false,
+      response_format: { type: "json_object" },
+    });
+
+    // json_object != json_schema, so no match
+    expect(res.status).toBe(404);
+    expect(JSON.parse(res.body).error.type).toBe("invalid_request_error");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Structured Output: responseFormat + model + userMessage combined matching
+// ---------------------------------------------------------------------------
+
+describe("responseFormat + model + userMessage combined matching", () => {
+  let srv: ServerInstance;
+
+  const COMBO_A: Fixture = {
+    match: { userMessage: "combo", model: "gpt-4", responseFormat: "json_object" },
+    response: { content: "combo-A" },
+  };
+
+  const COMBO_B: Fixture = {
+    match: { userMessage: "combo", model: "gpt-4o", responseFormat: "json_object" },
+    response: { content: "combo-B" },
+  };
+
+  const COMBO_C: Fixture = {
+    match: { userMessage: "combo", model: "gpt-4", responseFormat: "json_schema" },
+    response: { content: "combo-C" },
+  };
+
+  const COMBO_D: Fixture = {
+    match: { userMessage: "combo", model: "gpt-4o", responseFormat: "json_schema" },
+    response: { content: "combo-D" },
+  };
+
+  beforeAll(async () => {
+    srv = await createServer([COMBO_A, COMBO_B, COMBO_C, COMBO_D], { port: 0 });
+  });
+
+  afterAll(async () => {
+    await new Promise<void>((r) => srv.server.close(() => r()));
+  });
+
+  it("routes to correct fixture based on all three criteria", async () => {
+    const combos: Array<{ model: string; rfType: string; expected: string }> = [
+      { model: "gpt-4", rfType: "json_object", expected: "combo-A" },
+      { model: "gpt-4o", rfType: "json_object", expected: "combo-B" },
+      { model: "gpt-4", rfType: "json_schema", expected: "combo-C" },
+      { model: "gpt-4o", rfType: "json_schema", expected: "combo-D" },
+    ];
+
+    for (const { model, rfType, expected } of combos) {
+      const res = await httpPost(`${srv.url}/v1/chat/completions`, {
+        model,
+        messages: [{ role: "user", content: "combo" }],
+        stream: false,
+        response_format: { type: rfType },
+      });
+
+      expect(res.status).toBe(200);
+      const json = JSON.parse(res.body);
+      expect(json.choices[0].message.content).toBe(expected);
+    }
+  });
+
+  it("returns 404 when userMessage matches but model and responseFormat do not", async () => {
+    const res = await httpPost(`${srv.url}/v1/chat/completions`, {
+      model: "claude-3",
+      messages: [{ role: "user", content: "combo" }],
+      stream: false,
+      response_format: { type: "json_object" },
+    });
+
+    expect(res.status).toBe(404);
+    expect(JSON.parse(res.body).error.type).toBe("invalid_request_error");
+  });
+
+  it("returns 404 when model and responseFormat match but userMessage does not", async () => {
+    const res = await httpPost(`${srv.url}/v1/chat/completions`, {
+      model: "gpt-4",
+      messages: [{ role: "user", content: "something-else" }],
+      stream: false,
+      response_format: { type: "json_object" },
+    });
+
+    expect(res.status).toBe(404);
+    expect(JSON.parse(res.body).error.type).toBe("invalid_request_error");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Structured Output: malformed response_format object
+// ---------------------------------------------------------------------------
+
+describe("malformed response_format object", () => {
+  let srv: ServerInstance;
+
+  const NORMAL_FIXTURE: Fixture = {
+    match: { userMessage: "malformed-rf-test" },
+    response: { content: "matched-without-rf" },
+  };
+
+  const RF_FIXTURE: Fixture = {
+    match: { userMessage: "malformed-rf-test", responseFormat: "json_object" },
+    response: { content: "matched-with-rf" },
+  };
+
+  beforeAll(async () => {
+    srv = await createServer([RF_FIXTURE, NORMAL_FIXTURE], { port: 0 });
+  });
+
+  afterAll(async () => {
+    await new Promise<void>((r) => srv.server.close(() => r()));
+  });
+
+  it("response_format with missing type does not match responseFormat-gated fixture", async () => {
+    // response_format: {} has no type, so req.response_format.type is undefined
+    // RF_FIXTURE requires responseFormat: "json_object" — should not match
+    // NORMAL_FIXTURE has no responseFormat constraint — should match
+    const res = await httpPost(`${srv.url}/v1/chat/completions`, {
+      model: "gpt-4",
+      messages: [{ role: "user", content: "malformed-rf-test" }],
+      stream: false,
+      response_format: {},
+    });
+
+    expect(res.status).toBe(200);
+    const json = JSON.parse(res.body);
+    expect(json.choices[0].message.content).toBe("matched-without-rf");
+  });
+
+  it("response_format with wrong type value (number) does not match responseFormat-gated fixture", async () => {
+    // response_format: { type: 123 } — type is a number, not a string
+    // RF_FIXTURE requires "json_object" — should not match
+    // NORMAL_FIXTURE has no responseFormat constraint — should match
+    const res = await httpPost(`${srv.url}/v1/chat/completions`, {
+      model: "gpt-4",
+      messages: [{ role: "user", content: "malformed-rf-test" }],
+      stream: false,
+      response_format: { type: 123 },
+    });
+
+    expect(res.status).toBe(200);
+    const json = JSON.parse(res.body);
+    expect(json.choices[0].message.content).toBe("matched-without-rf");
+  });
+
+  it("response_format with unrecognized type string does not match responseFormat-gated fixture", async () => {
+    const res = await httpPost(`${srv.url}/v1/chat/completions`, {
+      model: "gpt-4",
+      messages: [{ role: "user", content: "malformed-rf-test" }],
+      stream: false,
+      response_format: { type: "not_a_real_format" },
+    });
+
+    expect(res.status).toBe(200);
+    const json = JSON.parse(res.body);
+    // Falls through to NORMAL_FIXTURE since "not_a_real_format" != "json_object"
+    expect(json.choices[0].message.content).toBe("matched-without-rf");
+  });
+});
