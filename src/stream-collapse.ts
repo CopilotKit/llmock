@@ -17,6 +17,7 @@ export interface CollapseResult {
   content?: string;
   toolCalls?: ToolCall[];
   droppedChunks?: number;
+  truncated?: boolean;
 }
 
 // ---------------------------------------------------------------------------
@@ -421,9 +422,10 @@ export function collapseCohereSSE(body: string): CollapseResult {
  *   [payload: variable]
  *   [message_crc32: 4B]
  */
-function decodeEventStreamFrames(
-  buf: Buffer,
-): Array<{ headers: Record<string, string>; payload: Buffer }> {
+function decodeEventStreamFrames(buf: Buffer): {
+  frames: Array<{ headers: Record<string, string>; payload: Buffer }>;
+  truncated: boolean;
+} {
   const frames: Array<{ headers: Record<string, string>; payload: Buffer }> = [];
   let offset = 0;
 
@@ -437,7 +439,7 @@ function decodeEventStreamFrames(
     const preludeCrc = buf.readUInt32BE(offset + 8);
     const computedPreludeCrc = crc32(buf.subarray(offset, offset + 8));
     if (preludeCrc >>> 0 !== computedPreludeCrc >>> 0) {
-      break; // CRC mismatch — stop parsing
+      return { frames, truncated: true }; // Prelude CRC mismatch — stop parsing
     }
 
     // Parse headers
@@ -469,14 +471,14 @@ function decodeEventStreamFrames(
     const messageCrc = buf.readUInt32BE(offset + totalLength - 4);
     const computedMessageCrc = crc32(buf.subarray(offset, offset + totalLength - 4));
     if (messageCrc >>> 0 !== computedMessageCrc >>> 0) {
-      break; // Message CRC mismatch — stop parsing
+      return { frames, truncated: true }; // Message CRC mismatch — stop parsing
     }
 
     frames.push({ headers, payload });
     offset += totalLength;
   }
 
-  return frames;
+  return { frames, truncated: false };
 }
 
 /**
@@ -486,7 +488,7 @@ function decodeEventStreamFrames(
  *   contentBlockDelta, contentBlockStart, etc.
  */
 export function collapseBedrockEventStream(body: Buffer): CollapseResult {
-  const frames = decodeEventStreamFrames(body);
+  const { frames, truncated } = decodeEventStreamFrames(body);
   let content = "";
   let droppedChunks = 0;
   const toolCallMap = new Map<number, { id: string; name: string; arguments: string }>();
@@ -582,10 +584,15 @@ export function collapseBedrockEventStream(body: Buffer): CollapseResult {
         ...(tc.id ? { id: tc.id } : {}),
       })),
       ...(droppedChunks > 0 ? { droppedChunks } : {}),
+      ...(truncated ? { truncated } : {}),
     };
   }
 
-  return { content, ...(droppedChunks > 0 ? { droppedChunks } : {}) };
+  return {
+    content,
+    ...(droppedChunks > 0 ? { droppedChunks } : {}),
+    ...(truncated ? { truncated } : {}),
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -627,7 +634,8 @@ export function collapseStreamingResponse(
       case "cohere":
         return collapseCohereSSE(str);
       default:
-        // Try OpenAI format as default for unknown SSE providers
+        // Unknown provider — fall back to OpenAI SSE format.
+        // TODO: log at debug level when provider is not recognized
         return collapseOpenAISSE(str);
     }
   }
