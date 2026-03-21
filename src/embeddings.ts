@@ -106,6 +106,7 @@ export async function handleEmbeddings(
         body: syntheticReq,
       },
       defaults.registry,
+      defaults.logger,
     )
   )
     return;

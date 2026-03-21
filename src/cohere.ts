@@ -485,6 +485,7 @@ export async function handleCohere(
         body: completionReq,
       },
       defaults.registry,
+      defaults.logger,
     )
   )
     return;

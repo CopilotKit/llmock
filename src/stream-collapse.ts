@@ -8,6 +8,7 @@
 
 import { crc32 } from "node:zlib";
 import type { RecordProviderKey, ToolCall } from "./types.js";
+import type { Logger } from "./logger.js";
 
 // ---------------------------------------------------------------------------
 // Result type shared by all collapse functions
@@ -438,6 +439,11 @@ function decodeEventStreamFrames(buf: Buffer): {
     const totalLength = buf.readUInt32BE(offset);
     const headersLength = buf.readUInt32BE(offset + 4);
 
+    // Validate bounds: ensure the full frame is within the buffer
+    if (totalLength < 12 || offset + totalLength > buf.length) {
+      return { frames, truncated: true };
+    }
+
     // Validate prelude CRC
     const preludeCrc = buf.readUInt32BE(offset + 8);
     const computedPreludeCrc = crc32(buf.subarray(offset, offset + 8));
@@ -611,6 +617,7 @@ export function collapseStreamingResponse(
   contentType: string,
   providerKey: RecordProviderKey,
   body: string | Buffer,
+  logger?: Logger,
 ): CollapseResult | null {
   const ct = contentType.toLowerCase();
 
@@ -637,8 +644,10 @@ export function collapseStreamingResponse(
         return collapseGeminiSSE(str);
       case "cohere":
         return collapseCohereSSE(str);
+      case "bedrock":
+        return collapseAnthropicSSE(str);
       default:
-        console.warn(
+        logger?.warn(
           `[stream-collapse] unknown SSE provider "${providerKey}", falling back to OpenAI SSE format`,
         );
         return collapseOpenAISSE(str);

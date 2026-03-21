@@ -362,6 +362,7 @@ export async function handleOllama(
         body: completionReq,
       },
       defaults.registry,
+      defaults.logger,
     )
   )
     return;
@@ -604,6 +605,7 @@ export async function handleOllamaGenerate(
         body: completionReq,
       },
       defaults.registry,
+      defaults.logger,
     )
   )
     return;

@@ -547,6 +547,7 @@ export async function handleResponses(
         body: completionReq,
       },
       defaults.registry,
+      defaults.logger,
     )
   )
     return;

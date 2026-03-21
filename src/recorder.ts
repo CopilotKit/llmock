@@ -107,6 +107,7 @@ export async function proxyAndRecord(
     ctString,
     providerKey,
     isBinaryStream ? rawBuffer : upstreamBody,
+    defaults.logger,
   );
 
   let fixtureResponse: FixtureResponse;
@@ -214,6 +215,7 @@ function makeUpstreamRequest(
   return new Promise((resolve, reject) => {
     const transport = target.protocol === "https:" ? https : http;
     const UPSTREAM_TIMEOUT_MS = 30_000;
+    const BODY_TIMEOUT_MS = 30_000;
     const req = transport.request(
       target,
       {
@@ -225,6 +227,9 @@ function makeUpstreamRequest(
         },
       },
       (res) => {
+        res.setTimeout(BODY_TIMEOUT_MS, () => {
+          req.destroy(new Error(`Upstream response timed out after ${BODY_TIMEOUT_MS / 1000}s`));
+        });
         const chunks: Buffer[] = [];
         res.on("data", (chunk: Buffer) => chunks.push(chunk));
         res.on("error", reject);

@@ -1,13 +1,20 @@
 /**
- * AWS Bedrock Claude endpoint support.
+ * AWS Bedrock Claude endpoint support — invoke and invoke-with-response-stream.
  *
- * Handles POST /model/{modelId}/invoke and /invoke-with-response-stream
- * requests. Translates incoming Bedrock Claude format into the
- * ChatCompletionRequest format used by the fixture router, and converts
- * fixture responses back into the appropriate Bedrock response format
- * (JSON for invoke, AWS Event Stream binary encoding for streaming).
+ * Handles four Bedrock endpoint families (split across two modules):
  *
- * See bedrock-converse.ts for /converse and /converse-stream support.
+ *   This file (bedrock.ts):
+ *     - POST /model/{modelId}/invoke                  — non-streaming invoke
+ *     - POST /model/{modelId}/invoke-with-response-stream — binary EventStream streaming
+ *
+ *   bedrock-converse.ts:
+ *     - POST /model/{modelId}/converse                — Converse API (non-streaming)
+ *     - POST /model/{modelId}/converse-stream         — Converse API (EventStream streaming)
+ *
+ * Translates incoming Bedrock Claude format into the ChatCompletionRequest
+ * format used by the fixture router, and converts fixture responses back into
+ * the appropriate Bedrock response format (JSON for invoke, AWS Event Stream
+ * binary encoding for streaming).
  */
 
 import type * as http from "node:http";
@@ -322,6 +329,7 @@ export async function handleBedrock(
         body: completionReq,
       },
       defaults.registry,
+      defaults.logger,
     )
   )
     return;
@@ -638,6 +646,7 @@ export async function handleBedrockStream(
         body: completionReq,
       },
       defaults.registry,
+      defaults.logger,
     )
   )
     return;

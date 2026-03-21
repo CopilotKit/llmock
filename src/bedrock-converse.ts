@@ -283,6 +283,7 @@ export async function handleConverse(
         body: completionReq,
       },
       defaults.registry,
+      defaults.logger,
     )
   )
     return;
@@ -485,6 +486,7 @@ export async function handleConverseStream(
         body: completionReq,
       },
       defaults.registry,
+      defaults.logger,
     )
   )
     return;

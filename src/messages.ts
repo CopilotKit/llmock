@@ -484,6 +484,7 @@ export async function handleMessages(
         body: completionReq,
       },
       defaults.registry,
+      defaults.logger,
     )
   )
     return;

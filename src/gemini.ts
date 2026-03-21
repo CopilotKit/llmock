@@ -436,6 +436,7 @@ export async function handleGemini(
         body: completionReq,
       },
       defaults.registry,
+      defaults.logger,
     )
   )
     return;

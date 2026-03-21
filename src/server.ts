@@ -202,6 +202,7 @@ async function handleCompletions(
         body,
       },
       defaults.registry,
+      defaults.logger,
     )
   )
     return;

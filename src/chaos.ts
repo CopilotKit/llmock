@@ -11,6 +11,7 @@ import type * as http from "node:http";
 import type { ChaosAction, ChaosConfig, ChatCompletionRequest, Fixture } from "./types.js";
 import { writeErrorResponse } from "./sse-writer.js";
 import type { Journal } from "./journal.js";
+import type { Logger } from "./logger.js";
 import type { MetricsRegistry } from "./metrics.js";
 
 /**
@@ -21,6 +22,7 @@ function resolveChaosConfig(
   fixture: Fixture | null,
   serverDefaults?: ChaosConfig,
   rawHeaders?: http.IncomingHttpHeaders,
+  logger?: Logger,
 ): ChaosConfig {
   const base: ChaosConfig = { ...serverDefaults };
 
@@ -41,10 +43,10 @@ function resolveChaosConfig(
     if (typeof dropHeader === "string") {
       const val = parseFloat(dropHeader);
       if (isNaN(val)) {
-        console.warn(`[chaos] x-llmock-chaos-drop: invalid value "${dropHeader}", ignoring`);
+        logger?.warn(`[chaos] x-llmock-chaos-drop: invalid value "${dropHeader}", ignoring`);
       } else {
         if (val < 0 || val > 1) {
-          console.warn(`[chaos] x-llmock-chaos-drop: value ${val} out of range [0,1], clamping`);
+          logger?.warn(`[chaos] x-llmock-chaos-drop: value ${val} out of range [0,1], clamping`);
         }
         base.dropRate = Math.min(1, Math.max(0, val));
       }
@@ -52,12 +54,12 @@ function resolveChaosConfig(
     if (typeof malformedHeader === "string") {
       const val = parseFloat(malformedHeader);
       if (isNaN(val)) {
-        console.warn(
+        logger?.warn(
           `[chaos] x-llmock-chaos-malformed: invalid value "${malformedHeader}", ignoring`,
         );
       } else {
         if (val < 0 || val > 1) {
-          console.warn(
+          logger?.warn(
             `[chaos] x-llmock-chaos-malformed: value ${val} out of range [0,1], clamping`,
           );
         }
@@ -67,12 +69,12 @@ function resolveChaosConfig(
     if (typeof disconnectHeader === "string") {
       const val = parseFloat(disconnectHeader);
       if (isNaN(val)) {
-        console.warn(
+        logger?.warn(
           `[chaos] x-llmock-chaos-disconnect: invalid value "${disconnectHeader}", ignoring`,
         );
       } else {
         if (val < 0 || val > 1) {
-          console.warn(
+          logger?.warn(
             `[chaos] x-llmock-chaos-disconnect: value ${val} out of range [0,1], clamping`,
           );
         }
@@ -100,8 +102,9 @@ export function evaluateChaos(
   fixture: Fixture | null,
   serverDefaults?: ChaosConfig,
   rawHeaders?: http.IncomingHttpHeaders,
+  logger?: Logger,
 ): ChaosAction | null {
-  const config = resolveChaosConfig(fixture, serverDefaults, rawHeaders);
+  const config = resolveChaosConfig(fixture, serverDefaults, rawHeaders, logger);
 
   if (config.dropRate !== undefined && config.dropRate > 0 && Math.random() < config.dropRate) {
     return "drop";
@@ -143,8 +146,9 @@ export function applyChaos(
   journal: Journal,
   context: ChaosJournalContext,
   registry?: MetricsRegistry,
+  logger?: Logger,
 ): boolean {
-  const action = evaluateChaos(fixture, serverDefaults, rawHeaders);
+  const action = evaluateChaos(fixture, serverDefaults, rawHeaders, logger);
   if (!action) return false;
 
   if (registry) {
