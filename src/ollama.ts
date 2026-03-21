@@ -14,11 +14,10 @@
 
 import type * as http from "node:http";
 import type {
-  ChaosConfig,
   ChatCompletionRequest,
   ChatMessage,
   Fixture,
-  RecordConfig,
+  HandlerDefaults,
   ToolCall,
   ToolDefinition,
 } from "./types.js";
@@ -30,13 +29,12 @@ import { createInterruptionSignal } from "./interruption.js";
 import type { Journal } from "./journal.js";
 import type { Logger } from "./logger.js";
 import { applyChaos } from "./chaos.js";
-import type { MetricsRegistry } from "./metrics.js";
 import { proxyAndRecord } from "./recorder.js";
 
 // ─── Ollama request types ────────────────────────────────────────────────────
 
 interface OllamaMessage {
-  role: string;
+  role: "system" | "user" | "assistant" | "tool";
   content: string;
 }
 
@@ -288,15 +286,7 @@ export async function handleOllama(
   raw: string,
   fixtures: Fixture[],
   journal: Journal,
-  defaults: {
-    latency: number;
-    chunkSize: number;
-    logger: Logger;
-    chaos?: ChaosConfig;
-    registry?: MetricsRegistry;
-    record?: RecordConfig;
-    strict?: boolean;
-  },
+  defaults: HandlerDefaults,
   setCorsHeaders: (res: http.ServerResponse) => void,
 ): Promise<void> {
   const { logger } = defaults;
@@ -539,15 +529,7 @@ export async function handleOllamaGenerate(
   raw: string,
   fixtures: Fixture[],
   journal: Journal,
-  defaults: {
-    latency: number;
-    chunkSize: number;
-    logger: Logger;
-    chaos?: ChaosConfig;
-    registry?: MetricsRegistry;
-    record?: RecordConfig;
-    strict?: boolean;
-  },
+  defaults: HandlerDefaults,
   setCorsHeaders: (res: http.ServerResponse) => void,
 ): Promise<void> {
   setCorsHeaders(res);

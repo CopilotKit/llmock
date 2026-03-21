@@ -85,7 +85,7 @@ export type { StreamOptions } from "./sse-writer.js";
 
 // Chaos
 export { evaluateChaos, applyChaos } from "./chaos.js";
-export type { ChaosAction } from "./chaos.js";
+export type { ChaosAction } from "./types.js";
 
 // Recorder
 export { proxyAndRecord } from "./recorder.js";
@@ -96,7 +96,7 @@ export {
   collapseAnthropicSSE,
   collapseGeminiSSE,
   collapseOllamaNDJSON,
-  collapseCohereSS,
+  collapseCohereSSE,
   collapseBedrockEventStream,
   collapseStreamingResponse,
 } from "./stream-collapse.js";
@@ -130,4 +130,5 @@ export type {
   EmbeddingFixtureOpts,
   ToolCallMessage,
   RecordConfig,
+  RecordProviderKey,
 } from "./types.js";

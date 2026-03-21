@@ -1,4 +1,7 @@
-// OpenAI Chat Completion request types (subset we care about)
+import type { Logger } from "./logger.js";
+import type { MetricsRegistry } from "./metrics.js";
+
+// LLMock type definitions — shared across all provider adapters and the fixture router.
 
 export interface ContentPart {
   type: string;
@@ -97,6 +100,8 @@ export interface ChaosConfig {
   disconnectRate?: number;
 }
 
+export type ChaosAction = "drop" | "malformed" | "disconnect";
+
 // Fixture
 
 export interface Fixture {
@@ -156,7 +161,7 @@ export interface JournalEntry {
     fixture: Fixture | null;
     interrupted?: boolean;
     interruptReason?: string;
-    chaosAction?: "drop" | "malformed" | "disconnect";
+    chaosAction?: ChaosAction;
   };
 }
 
@@ -215,8 +220,18 @@ export interface ChatCompletionMessage {
 
 // Server options
 
+export type RecordProviderKey =
+  | "openai"
+  | "anthropic"
+  | "gemini"
+  | "vertexai"
+  | "bedrock"
+  | "azure"
+  | "ollama"
+  | "cohere";
+
 export interface RecordConfig {
-  providers: Record<string, string | undefined>;
+  providers: Partial<Record<RecordProviderKey, string>>;
   fixturePath?: string;
 }
 
@@ -234,4 +249,16 @@ export interface MockServerOptions {
   strict?: boolean;
   /** Record-and-replay: proxy unmatched requests to upstream and save fixtures. */
   record?: RecordConfig;
+}
+
+// Handler defaults — the common shape passed from server.ts to every handler
+
+export interface HandlerDefaults {
+  latency: number;
+  chunkSize: number;
+  logger: Logger;
+  chaos?: ChaosConfig;
+  registry?: MetricsRegistry;
+  record?: RecordConfig;
+  strict?: boolean;
 }

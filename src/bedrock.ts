@@ -1,19 +1,21 @@
 /**
- * AWS Bedrock Claude invoke endpoint support.
+ * AWS Bedrock Claude endpoint support.
  *
- * Translates incoming POST /model/{modelId}/invoke requests (Bedrock Claude
- * format) into the ChatCompletionRequest format used by the fixture router,
- * and converts fixture responses back into the Anthropic Messages API
- * non-streaming format (which Bedrock Claude SDKs expect as the response body).
+ * Handles POST /model/{modelId}/invoke and /invoke-with-response-stream
+ * requests. Translates incoming Bedrock Claude format into the
+ * ChatCompletionRequest format used by the fixture router, and converts
+ * fixture responses back into the appropriate Bedrock response format
+ * (JSON for invoke, AWS Event Stream binary encoding for streaming).
+ *
+ * See bedrock-converse.ts for /converse and /converse-stream support.
  */
 
 import type * as http from "node:http";
 import type {
-  ChaosConfig,
   ChatCompletionRequest,
   ChatMessage,
   Fixture,
-  RecordConfig,
+  HandlerDefaults,
   ToolCall,
   ToolDefinition,
 } from "./types.js";
@@ -244,7 +246,7 @@ export async function handleBedrock(
   modelId: string,
   fixtures: Fixture[],
   journal: Journal,
-  defaults: { latency: number; chunkSize: number; logger: Logger; chaos?: ChaosConfig },
+  defaults: HandlerDefaults,
   setCorsHeaders: (res: http.ServerResponse) => void,
 ): Promise<void> {
   const { logger } = defaults;
@@ -553,15 +555,7 @@ export async function handleBedrockStream(
   modelId: string,
   fixtures: Fixture[],
   journal: Journal,
-  defaults: {
-    latency: number;
-    chunkSize: number;
-    logger: Logger;
-    chaos?: ChaosConfig;
-    registry?: MetricsRegistry;
-    record?: RecordConfig;
-    strict?: boolean;
-  },
+  defaults: HandlerDefaults,
   setCorsHeaders: (res: http.ServerResponse) => void,
 ): Promise<void> {
   const { logger } = defaults;

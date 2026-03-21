@@ -2,9 +2,8 @@ import * as http from "node:http";
 import type {
   Fixture,
   ChatCompletionRequest,
-  ChaosConfig,
+  HandlerDefaults,
   MockServerOptions,
-  RecordConfig,
 } from "./types.js";
 import { Journal } from "./journal.js";
 import { matchFixture } from "./router.js";
@@ -34,22 +33,14 @@ import { handleWebSocketRealtime } from "./ws-realtime.js";
 import { handleWebSocketGeminiLive } from "./ws-gemini-live.js";
 import { Logger } from "./logger.js";
 import { applyChaos } from "./chaos.js";
-import { createMetricsRegistry, normalizePathLabel, type MetricsRegistry } from "./metrics.js";
+import { createMetricsRegistry, normalizePathLabel } from "./metrics.js";
 import { proxyAndRecord } from "./recorder.js";
 
 export interface ServerInstance {
   server: http.Server;
   journal: Journal;
   url: string;
-  defaults: {
-    latency: number;
-    chunkSize: number;
-    logger: Logger;
-    chaos?: ChaosConfig;
-    registry?: MetricsRegistry;
-    strict?: boolean;
-    record?: RecordConfig;
-  };
+  defaults: HandlerDefaults;
 }
 
 const COMPLETIONS_PATH = "/v1/chat/completions";
@@ -122,15 +113,7 @@ async function handleCompletions(
   res: http.ServerResponse,
   fixtures: Fixture[],
   journal: Journal,
-  defaults: {
-    latency: number;
-    chunkSize: number;
-    logger: Logger;
-    chaos?: ChaosConfig;
-    registry?: MetricsRegistry;
-    strict?: boolean;
-    record?: RecordConfig;
-  },
+  defaults: HandlerDefaults,
   modelFallback?: string,
   providerKey?: string,
 ): Promise<void> {

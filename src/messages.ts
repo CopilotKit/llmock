@@ -8,10 +8,10 @@
 
 import type * as http from "node:http";
 import type {
-  ChaosConfig,
   ChatCompletionRequest,
   ChatMessage,
   Fixture,
+  HandlerDefaults,
   StreamingProfile,
   ToolCall,
   ToolDefinition,
@@ -431,7 +431,7 @@ export async function handleMessages(
   raw: string,
   fixtures: Fixture[],
   journal: Journal,
-  defaults: { latency: number; chunkSize: number; logger: Logger; chaos?: ChaosConfig },
+  defaults: HandlerDefaults,
   setCorsHeaders: (res: http.ServerResponse) => void,
 ): Promise<void> {
   const { logger } = defaults;
