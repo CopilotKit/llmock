@@ -148,7 +148,7 @@ export async function proxyAndRecord(
     // Ensure fixture directory exists
     fs.mkdirSync(fixturePath, { recursive: true });
 
-    // Exclude auth headers from saved fixture (they're in the match/response, not headers)
+    // Auth headers are forwarded to upstream but excluded from saved fixtures for security
     const fileContent = isEmptyMatch
       ? {
           fixtures: [fixture],
@@ -159,6 +159,7 @@ export async function proxyAndRecord(
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Unknown filesystem error";
     defaults.logger.error(`Failed to save fixture to disk: ${msg}`);
+    res.setHeader("X-LLMock-Record-Error", msg);
   }
 
   // Register in memory so subsequent identical requests match (skip if empty match)
@@ -174,7 +175,7 @@ export async function proxyAndRecord(
     relayHeaders["Content-Type"] = ctString;
   }
   res.writeHead(upstreamStatus, relayHeaders);
-  res.end(upstreamBody);
+  res.end(isBinaryStream ? rawBuffer : upstreamBody);
 
   return true;
 }
@@ -330,10 +331,24 @@ function buildFixtureResponse(parsed: unknown, status: number): FixtureResponse 
     }
   }
 
-  // Ollama: { message: { content: "..." } }
+  // Ollama: { message: { content: "...", tool_calls: [...] } }
   if (obj.message && typeof obj.message === "object") {
     const msg = obj.message as Record<string, unknown>;
-    if (typeof msg.content === "string") {
+    // Tool calls (check before content — Ollama sends content: "" alongside tool_calls)
+    if (Array.isArray(msg.tool_calls) && msg.tool_calls.length > 0) {
+      const toolCalls: ToolCall[] = (msg.tool_calls as Array<Record<string, unknown>>)
+        .filter((tc) => tc.function != null)
+        .map((tc) => {
+          const fn = tc.function as Record<string, unknown>;
+          return {
+            name: String(fn.name ?? ""),
+            arguments:
+              typeof fn.arguments === "string" ? fn.arguments : JSON.stringify(fn.arguments),
+          };
+        });
+      return { toolCalls };
+    }
+    if (typeof msg.content === "string" && msg.content.length > 0) {
       return { content: msg.content };
     }
     // Ollama message with content array (like Cohere)

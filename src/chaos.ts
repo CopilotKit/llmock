@@ -8,12 +8,10 @@
  */
 
 import type * as http from "node:http";
-import type { ChaosConfig, ChatCompletionRequest, Fixture } from "./types.js";
+import type { ChaosAction, ChaosConfig, ChatCompletionRequest, Fixture } from "./types.js";
 import { writeErrorResponse } from "./sse-writer.js";
 import type { Journal } from "./journal.js";
 import type { MetricsRegistry } from "./metrics.js";
-
-export type ChaosAction = "drop" | "malformed" | "disconnect";
 
 /**
  * Resolve chaos config from headers, fixture, and server defaults.
@@ -53,6 +51,13 @@ function resolveChaosConfig(
       if (!isNaN(val)) base.disconnectRate = val;
     }
   }
+
+  // Clamp all rates to [0, 1]
+  if (base.dropRate !== undefined) base.dropRate = Math.max(0, Math.min(1, base.dropRate));
+  if (base.malformedRate !== undefined)
+    base.malformedRate = Math.max(0, Math.min(1, base.malformedRate));
+  if (base.disconnectRate !== undefined)
+    base.disconnectRate = Math.max(0, Math.min(1, base.disconnectRate));
 
   return base;
 }

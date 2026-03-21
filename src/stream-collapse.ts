@@ -271,6 +271,7 @@ export function collapseOllamaNDJSON(body: string): CollapseResult {
   const lines = body.split("\n").filter((l) => l.trim().length > 0);
   let content = "";
   let droppedChunks = 0;
+  const toolCalls: ToolCall[] = [];
 
   for (const line of lines) {
     let parsed: Record<string, unknown>;
@@ -283,14 +284,34 @@ export function collapseOllamaNDJSON(body: string): CollapseResult {
 
     // /api/chat format
     const message = parsed.message as Record<string, unknown> | undefined;
-    if (message && typeof message.content === "string") {
-      content += message.content;
+    if (message) {
+      if (typeof message.content === "string") {
+        content += message.content;
+      }
+
+      // Tool calls
+      if (Array.isArray(message.tool_calls)) {
+        for (const tc of message.tool_calls as Array<Record<string, unknown>>) {
+          const fn = tc.function as Record<string, unknown> | undefined;
+          if (fn) {
+            toolCalls.push({
+              name: String(fn.name ?? ""),
+              arguments:
+                typeof fn.arguments === "string" ? fn.arguments : JSON.stringify(fn.arguments),
+            });
+          }
+        }
+      }
     }
 
     // /api/generate format
     else if (typeof parsed.response === "string") {
       content += parsed.response;
     }
+  }
+
+  if (toolCalls.length > 0) {
+    return { toolCalls, ...(droppedChunks > 0 ? { droppedChunks } : {}) };
   }
 
   return { content, ...(droppedChunks > 0 ? { droppedChunks } : {}) };
@@ -306,7 +327,7 @@ export function collapseOllamaNDJSON(body: string): CollapseResult {
  * Format:
  *   event: content-delta\ndata: {"type":"content-delta","delta":{"message":{"content":{"text":"Hello"}}}}\n\n
  */
-export function collapseCohereSS(body: string): CollapseResult {
+export function collapseCohereSSE(body: string): CollapseResult {
   const blocks = body.split("\n\n").filter((b) => b.trim().length > 0);
   let content = "";
   let droppedChunks = 0;
@@ -575,7 +596,7 @@ export function collapseStreamingResponse(
       case "vertexai":
         return collapseGeminiSSE(str);
       case "cohere":
-        return collapseCohereSS(str);
+        return collapseCohereSSE(str);
       default:
         // Try OpenAI format as default for unknown SSE providers
         return collapseOpenAISSE(str);
