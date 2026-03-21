@@ -126,6 +126,34 @@ describe("evaluateChaos", () => {
     const result = evaluateChaos(null, undefined, headers);
     expect(result).toBe("drop");
   });
+
+  it("clamps rate > 1 to 1.0 (always triggers)", () => {
+    // dropRate 5.0 should be clamped to 1.0, so it always triggers
+    const fixture: Fixture = {
+      match: { userMessage: "hello" },
+      response: { content: "hi" },
+      chaos: { dropRate: 5.0 },
+    };
+    // Run 20 times — every single one must return "drop"
+    for (let i = 0; i < 20; i++) {
+      const result = evaluateChaos(fixture, undefined, undefined);
+      expect(result).toBe("drop");
+    }
+  });
+
+  it("clamps negative rate to 0 (never triggers)", () => {
+    // dropRate -1.0 should be clamped to 0, so it never triggers
+    const fixture: Fixture = {
+      match: { userMessage: "hello" },
+      response: { content: "hi" },
+      chaos: { dropRate: -1.0 },
+    };
+    // Run 50 times — none should trigger
+    for (let i = 0; i < 50; i++) {
+      const result = evaluateChaos(fixture, undefined, undefined);
+      expect(result).toBeNull();
+    }
+  });
 });
 
 // ---------------------------------------------------------------------------
